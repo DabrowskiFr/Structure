@@ -16,10 +16,7 @@
 (************************************************************************)
 
 Require Import Utf8.
-
-Require Import Coq.Program.Basics. 
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Morphisms.
+Require Import Program.Basics.
 
 Open Scope program_scope.
 
@@ -27,27 +24,27 @@ Notation "$" := (fun x y => y x) (at level 29).
 
 Class Functor (f : Type -> Type) : Type :=
   {
-    fmap : forall {a b : Type}, (a -> b) -> f a -> f b;
-    fmap_id   : forall a : Type, fmap (@id a) = id;
-    fmap_comp : forall (a b c : Type) (f : b -> c) (g : a -> b),
+    fmap : forall {A B : Type}, (A -> B) -> f A-> f B;
+    functor_identity   : forall {A : Type}, fmap (@id A) = id;
+    functor_compose : forall {A B C : Type} (f : B -> C) (g : A -> B),
         (fmap f ∘ fmap g) = fmap (f ∘ g)
   }.
 
 Class Applicative (f : Type -> Type) `(E : Functor f)  : Type :=
   {
-    pure : ∀ {a : Type}, a -> f a;
-    ap : ∀ {a b : Type}, f (a -> b) -> f a -> f b;
-    applicative_id : ∀ {a : Type} (x : f a), ap (pure id) x = x;
-    applicative_comp : ∀ {a b c : Type} (u : f (b -> c)) (v : f (a -> b)) (w : f a) ,
+    pure : ∀ {A : Type}, A -> f A;
+    ap : ∀ {A B : Type}, f (A -> B) -> f A -> f B;
+    applicative_identity : ∀ {A : Type} (x : f A), ap (pure id) x = x;
+    applicative_compose : ∀ {A B C : Type} (u : f (B -> C)) (v : f (A -> B)) (w : f A),
         ap (ap (ap (pure compose) u) v) w = ap u (ap v w);
     applicative_homomorphism :
-      ∀ {a b : Type} (f : a -> b) (x : a), ap (pure f) (pure x) = pure (f x);
+      ∀ {A B : Type} (f : A -> B) (x : A), ap (pure f) (pure x) = pure (f x);
     applicative_interchange :
-      ∀ {a b : Type} (u : f ( a -> b)) ( y : a), ap u (pure y) = ap (pure ($ y)) u;
+      ∀ {A B : Type} (u : f ( A -> B)) ( y : A), ap u (pure y) = ap (pure ($ y)) u;
     applicative_fmap : ∀ {A B : Type} (f : A -> B), fmap f  = ap (pure f)
   }.
 
-Arguments fmap {f _ a b} g x.
+(*Arguments fmap {f _ a b} g x.*)
 
 Definition liftA (f : Type -> Type) `{E : Applicative f} (A B : Type) (g : A -> B) (a : f A) :=
   @ap f _ _ _ _ (pure g) a.
@@ -56,6 +53,7 @@ Definition liftA2 (f : Type -> Type) `{E : Applicative f} (A B C : Type) (g : A 
            (a : f A) (b : f B) : f C :=
   @ap f _ _ _ _ (fmap g a) b.
 
+Declare Scope functor_scope.
 
 Infix "<$>" := fmap (at level 28, left associativity, only parsing) : functor_scope.
 
@@ -67,48 +65,3 @@ Infix "($>)" := (flip (fmap ∘ const)) (at level 28) : functor_scope.
 
 Infix "<*>" := ap (at level 28) : functor_scope.
 
-Instance functor_option : Functor option.
-Proof.
-  constructor 1 with (option_map).
-- intros a.
-  apply functional_extensionality.
-  destruct x; reflexivity.
-- intros a b c f g.
-  apply functional_extensionality.
-  intros x.
-  unfold compose.
-  destruct x; reflexivity.
-Defined.
-
-Instance applicative_option : Applicative option functor_option :=
-  {
-    pure _  := Some ;
-    ap _ _ fo xo :=
-      match (fo, xo) with
-        (Some f, Some x) => Some (f x)
-      | _ => None
-      end
-  }.
-- destruct x; reflexivity.
-- intros a b c u v w.
-  destruct u, v, w; try reflexivity.
-- reflexivity.
-- destruct u; reflexivity.
-- reflexivity.
-Defined.
-
-Instance fmap_pointwise_Proper (f : Type -> Type) (E : Functor f) (A B : Type):
-  Proper (@pointwise_relation A B eq  ==> eq) fmap.
-Proof.
-  intros x y H__pointwise.
-  f_equal.
-  apply functional_extensionality.
-  apply H__pointwise.
-Qed.
-
-Lemma fmap_some :
-  ∀ (A   B : Type) (o : option A) (x : B) (f : A -> B) (H : fmap f o = Some x), ∃ a, o = Some a /\ x = f a.
-Proof.
-  intros A B o x f H.
-  destruct o; simpl in H; [injection H;intros; subst; eauto | discriminate].
-Qed.

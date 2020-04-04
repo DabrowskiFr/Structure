@@ -16,25 +16,27 @@
 (************************************************************************)
 
 Require Import Utf8.
-Require Import Structure.Functor.
+Require Import Program.Basics.
+Require Import Program.Tactics.
+Require Import Struct.Functor.
+
+Declare Scope monad_scope.
+
+Notation "'return'" := pure : monad_scope.
 
 Class Monad (f : Type -> Type) `(E : Applicative f)  : Type :=
   {
-    bind : ∀ {a b : Type}, f a -> (a -> f b) -> f b 
+    bind : ∀ {a b : Type}, f a -> (a -> f b) -> f b;
+    monad_left_identity : ∀ {a b : Type} (x : a) (k: a -> f b), bind (pure x) k = k x;
+    monad_right_identity : forall {a b : Type} (m : f a) , bind m pure = m;
+    monad_associative : forall {a b c : Type} (m : f a) (k : a -> f b) (h : b -> f c),
+        bind m (fun x => bind (k x) h) = bind (bind m k) h  
   }.
 
-Infix ">>=" := bind (at level 28) : monad_scope.
+Infix ">>=" := bind (at level 29) : monad_scope.
 
-Infix ">>" := (fun m k => bind m (fun x => k)) (at level 28) : monad_scope. 
+Infix ">>" := (fun m k => bind m (fun x => k)) (at level 29) : monad_scope. 
 
 Notation "'do' X <- A ; B" := (bind A (fun X => B))
                                (at level 200, X ident, A at level 100, B at level 200).
 
-Instance monad_option : Monad option applicative_option :=
-  {
-    bind _ _ x f :=
-      match x with
-        Some x => f x
-      | None => None
-      end
-  }.

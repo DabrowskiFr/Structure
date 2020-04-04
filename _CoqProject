@@ -1,7 +1,6 @@
--R src Structure
+-R src Struct
 
 src/Functor.v
 src/Monad.v
 src/Monoid.v
-src/Foldable.v
-src/Traversable.v
+src/Option.v
